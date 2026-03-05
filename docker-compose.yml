@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=development
+      - REQUEST_TIMEOUT_SECONDS=30
+      - RATE_LIMIT_REQUESTS=5
+      - RATE_LIMIT_WINDOW_SECONDS=60
+    volumes:
+      - .:/app:rw
+    command: uvicorn main:app --reload --host 0.0.0.0 --port 8000
