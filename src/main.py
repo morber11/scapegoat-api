@@ -39,6 +39,8 @@ def create_app() -> FastAPI:
     if not origins and not settings.is_production:
         origins = ["*"]
 
+    logging.info("CORS allowed origins: %s", origins)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,

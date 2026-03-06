@@ -4,11 +4,11 @@ ENV PYTHONUNBUFFERED=1 \
     APP_ENV=production \
     REQUEST_TIMEOUT_SECONDS=30 \
     RATE_LIMIT_REQUESTS=5 \
-    RATE_LIMIT_WINDOW_SECONDS=60
+    RATE_LIMIT_WINDOW_SECONDS=60 \
+    ALLOWED_ORIGINS=""
 
 WORKDIR /app
 
-COPY pyproject.toml pyproject.toml
 COPY pyproject.toml pyproject.toml
 RUN pip install --no-cache-dir hatchling \
     && pip install --no-cache-dir .

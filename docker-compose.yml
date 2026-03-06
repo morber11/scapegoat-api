@@ -6,10 +6,14 @@ services:
     env_file:
       - .env
     environment:
-      - APP_ENV=production
-      - REQUEST_TIMEOUT_SECONDS=30
-      - RATE_LIMIT_REQUESTS=5
-      - RATE_LIMIT_WINDOW_SECONDS=60
+      - APP_ENV=${APP_ENV:-production}
+      - REQUEST_TIMEOUT_SECONDS=${REQUEST_TIMEOUT_SECONDS:-30}
+      - RATE_LIMIT_REQUESTS=${RATE_LIMIT_REQUESTS:-5}
+      - RATE_LIMIT_WINDOW_SECONDS=${RATE_LIMIT_WINDOW_SECONDS:-60}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL}
+      - PROVIDER=${PROVIDER}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     volumes:
       - .:/app:rw
     working_dir: /app/src
