@@ -42,7 +42,14 @@ class GeminiProvider:
         except ProviderError:
             raise
         except Exception as exc:
-            raise ProviderError(_PROVIDER_NAME, str(exc)) from exc
+            status = None
+            resp = getattr(exc, "response", None)
+            if resp is not None and hasattr(resp, "status_code"):
+                status = getattr(resp, "status_code")
+            if status == 429:
+                raise ProviderError(_PROVIDER_NAME, "rate limit exceeded", status_code=429) from exc
+            # else just propagate the original message
+            raise ProviderError(_PROVIDER_NAME, str(exc), status_code=status) from exc
 
     def _call_gemini(self, system_prompt: str, messages: list[ChatMessage]) -> str:
         contents = [

@@ -29,6 +29,14 @@ async def chat(
             detail=f"AI service timed out after {settings.request_timeout_seconds}s",
         ) from None
     except ProviderError as exc:
+        # if the provider included an HTTP status code, use it directly (e.g google gemini)
+        if getattr(exc, "status_code", None) == 429:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="rate limit exceeded",
+            ) from exc
+
+
         raw = str(exc)
         if "429" in raw or "RESOURCE_EXHAUSTED" in raw:
             detail = "rate limit exceeded"
