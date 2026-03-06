@@ -10,4 +10,5 @@ services:
       - RATE_LIMIT_WINDOW_SECONDS=60
     volumes:
       - .:/app:rw
+    working_dir: /app/src
     command: uvicorn main:app --reload --host 0.0.0.0 --port 8000
