@@ -87,6 +87,30 @@ async def test_retry_on_grammar_mismatch() -> None:
 
 
 @pytest.mark.asyncio
+async def test_append_period_when_user_ends_with_dot() -> None:
+    user = ChatMessage(role="user", content="please respond.")
+    provider = _make_provider("sure")
+    service = AIService(provider)
+
+    result = await service.chat(ChatRequest(messages=[user]))
+
+    # should not retry
+    assert provider.generate_response.await_count == 1
+    assert result.messages[-1].content == "sure."
+
+
+@pytest.mark.asyncio
+async def test_no_append_if_reply_already_has_dot() -> None:
+    user = ChatMessage(role="user", content="hello world.")
+    provider = _make_provider("already.")
+    service = AIService(provider)
+
+    result = await service.chat(ChatRequest(messages=[user]))
+    assert provider.generate_response.await_count == 1
+    assert result.messages[-1].content == "already."
+
+
+@pytest.mark.asyncio
 async def test_reprompt_not_seen_as_user_message() -> None:
     user = ChatMessage(role="user", content="Hello there.")
     provider = _make_provider()

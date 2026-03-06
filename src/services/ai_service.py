@@ -68,6 +68,10 @@ class AIService:
                 system_prompt=SYSTEM_PERSONALITY_PROMPT,
                 messages=payload,
             )
+        # instead of re prompting if there is a missing period, append it
+        last_user_msg = history[-1].content if history and history[-1].role == "user" else ""
+        if last_user_msg.endswith(".") and not reply.endswith("."):
+            reply += "."
 
         return ChatResponse(
             messages=history + [ChatMessage(role="assistant", content=reply)]
@@ -88,6 +92,7 @@ class AIService:
                 reasons.append("the user types in lowercase - match their style, do not capitalise your response")
             elif not user_is_lowercase and reply[0].isalpha() and reply[0].islower():
                 reasons.append("the user types with proper capitalisation - start your response with a capital letter")
+
 
         if last_user and last_user.lower() != reply.lower():
             user_words = [w.strip(".,!?;:'\"") for w in last_user.lower().split()]
