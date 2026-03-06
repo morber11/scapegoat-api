@@ -4,7 +4,6 @@ from core.config import get_settings
 
 
 def test_lifespan_requires_api_key(monkeypatch) -> None:
-    """app startup should fail if the API key is missing."""
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     get_settings.cache_clear()
 

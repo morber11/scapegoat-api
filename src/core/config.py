@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     rate_limit_requests: int = DEFAULT_RATE_LIMIT_REQUESTS
     rate_limit_window_seconds: int = DEFAULT_RATE_LIMIT_WINDOW_SECONDS
 
+    max_input_tokens: int = 1024
+
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
 

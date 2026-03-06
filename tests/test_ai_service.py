@@ -6,6 +6,7 @@ from core.constants.prompts import SYSTEM_PERSONALITY_PROMPT
 from providers.base import ProviderError
 from schemas.chat import ChatMessage, ChatRequest
 from services.ai_service import AIService
+from services.token_utils import estimate_tokens
 
 
 def _make_provider(reply: str = "hello") -> MagicMock:
@@ -86,6 +87,19 @@ async def test_retry_on_grammar_mismatch() -> None:
 
 
 @pytest.mark.asyncio
+async def test_reprompt_not_seen_as_user_message() -> None:
+    user = ChatMessage(role="user", content="Hello there.")
+    provider = _make_provider()
+    provider.generate_response = AsyncMock(side_effect=["hi", "Hi there."])
+    service = AIService(provider)
+
+    await service.chat(ChatRequest(messages=[user]))
+
+    second_msgs = provider.generate_response.await_args_list[1][1]["messages"]
+    assert all("capitalise" not in m.content.lower() for m in second_msgs)
+
+
+@pytest.mark.asyncio
 async def test_no_retry_if_response_ok() -> None:
     user = ChatMessage(role="user", content="Hi!")
     provider = _make_provider("Hi!")
@@ -106,6 +120,64 @@ async def test_retry_on_lowercase_style_mismatch() -> None:
     result = await service.chat(ChatRequest(messages=[user]))
     assert provider.generate_response.await_count == 2
     assert result.messages[-1].content == "hi there"
+
+
+@pytest.mark.asyncio
+async def test_no_trimming_when_under_budget() -> None:
+    provider = _make_provider("ok")
+    provider.generate_response = AsyncMock(return_value="ok")
+    service = AIService(provider)
+
+    from core.config import get_settings
+
+    settings = get_settings()
+    settings.max_input_tokens = 10000
+
+    user = ChatMessage(role="user", content="short")
+    await service.chat(ChatRequest(messages=[user]))
+    sent = provider.generate_response.await_args_list[0][1]["messages"]
+    assert sent == [user]
+
+
+@pytest.mark.asyncio
+async def test_trimming_happens_when_over_budget() -> None:
+    provider = _make_provider("response")
+    provider.generate_response = AsyncMock(return_value="response")
+    service = AIService(provider)
+
+    from core.config import get_settings
+    settings = get_settings()
+    msgs = [ChatMessage(role="user", content="x" * 10) for _ in range(5)]
+    # set budget just below full estimate so trimming removes something
+    full = estimate_tokens(SYSTEM_PERSONALITY_PROMPT, msgs)
+    settings.max_input_tokens = full - 1
+
+    await service.chat(ChatRequest(messages=list(msgs)))
+
+    sent = provider.generate_response.await_args_list[0][1]["messages"]
+    assert len(sent) < len(msgs)
+    assert sent == msgs[-len(sent):] if sent else sent == []
+
+
+@pytest.mark.asyncio
+async def test_trimming_applies_on_retry() -> None:
+    provider = _make_provider()
+    provider.generate_response = AsyncMock(side_effect=["World", "again"])
+    service = AIService(provider)
+
+    from core.config import get_settings
+    settings = get_settings()
+    user1 = ChatMessage(role="user", content="hello")
+    user2 = ChatMessage(role="user", content="world")
+    # choose a budget that keeps one message but not after reprompt
+    one_msg_tokens = estimate_tokens(SYSTEM_PERSONALITY_PROMPT, [user1])
+    settings.max_input_tokens = one_msg_tokens + 1
+
+    await service.chat(ChatRequest(messages=[user1, user2]))
+
+    assert provider.generate_response.await_count >= 2
+    second_args = provider.generate_response.await_args_list[1][1]
+    assert len(second_args["messages"]) < 3
 
 
 @pytest.mark.asyncio

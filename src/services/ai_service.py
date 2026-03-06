@@ -4,8 +4,11 @@ import difflib
 import logging
 
 from core.constants.prompts import SYSTEM_PERSONALITY_PROMPT
+from core.config import get_settings
 from providers.base import AIProvider
 from schemas.chat import ChatMessage, ChatRequest, ChatResponse
+
+from services.token_utils import estimate_tokens, trim_messages
 
 logger = logging.getLogger(__name__)
 
@@ -25,26 +28,49 @@ class AIService:
             self._provider.model_name,
         )
 
-        messages = list(request.messages)
+        history = list(request.messages)
+        payload = list(history)
+        settings = get_settings()
+        budget = settings.max_input_tokens
+
+        if estimate_tokens(SYSTEM_PERSONALITY_PROMPT, payload) > budget:
+            trimmed = trim_messages(SYSTEM_PERSONALITY_PROMPT, payload, budget)
+            logger.info(
+                "trimming chat history from %d to %d messages to fit token budget",
+                len(payload),
+                len(trimmed),
+            )
+            payload = trimmed
 
         reply = await self._provider.generate_response(
             system_prompt=SYSTEM_PERSONALITY_PROMPT,
-            messages=messages,
+            messages=payload,
         )
 
         for _ in range(_MAX_RETRIES):
-            reprompt = self._get_reprompt(reply, messages)
+            reprompt = self._get_reprompt(reply, history)
             if reprompt is None:
                 break
 
             logger.debug("response quality check failed - retrying: %s", reprompt)
+
+            payload = payload + [ChatMessage(role="user", content=reprompt)]
+            if estimate_tokens(SYSTEM_PERSONALITY_PROMPT, payload) > budget:
+                trimmed = trim_messages(SYSTEM_PERSONALITY_PROMPT, payload, budget)
+                logger.info(
+                    "trimming chat history for retry from %d to %d messages",
+                    len(payload),
+                    len(trimmed),
+                )
+                payload = trimmed
+
             reply = await self._provider.generate_response(
                 system_prompt=SYSTEM_PERSONALITY_PROMPT,
-                messages=messages + [ChatMessage(role="user", content=reprompt)],
+                messages=payload,
             )
 
         return ChatResponse(
-            messages=list(request.messages) + [ChatMessage(role="assistant", content=reply)]
+            messages=history + [ChatMessage(role="assistant", content=reply)]
         )
 
 
