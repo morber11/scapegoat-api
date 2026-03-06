@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import chat, health
-from api.middleware import RateLimitMiddleware, PrivateNetworkMiddleware
+from api.middleware import RateLimitMiddleware
 from core.config import get_settings
 
 logging.basicConfig(level=logging.INFO)
@@ -46,9 +46,8 @@ def create_app() -> FastAPI:
         allow_origins=origins,
         allow_methods=["*"],
         allow_headers=["*"],
+        allow_private_network=True,
     )
-
-    app.add_middleware(PrivateNetworkMiddleware)
 
     app.add_middleware(RateLimitMiddleware)
 

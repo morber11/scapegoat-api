@@ -41,13 +41,3 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         return response
-
-
-class PrivateNetworkMiddleware(BaseHTTPMiddleware):
-    """handle new access control request private network header
-    """
-    async def dispatch(self, request: Request, call_next: Callable):
-        response = await call_next(request)
-        if "access-control-request-private-network" in request.headers:
-            response.headers["Access-Control-Allow-Private-Network"] = "true"
-        return response

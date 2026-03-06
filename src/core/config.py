@@ -1,8 +1,9 @@
 import os
 from functools import lru_cache
+from typing import Annotated
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 DEFAULT_REQUEST_TIMEOUT_SECONDS: int = 30
 DEFAULT_RATE_LIMIT_REQUESTS: int = 5
@@ -29,9 +30,10 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
 
-    allowed_origins: list[str] = []
+    allowed_origins: Annotated[list[str], NoDecode] = []
 
     @field_validator("allowed_origins", mode="before")
+    @classmethod
     def _split_origins(cls, v):
         if isinstance(v, str):
             return [item.strip() for item in v.split(",") if item.strip()]
