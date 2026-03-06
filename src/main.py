@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import chat, health
-from api.middleware import RateLimitMiddleware
+from api.middleware import RateLimitMiddleware, PrivateNetworkMiddleware
 from core.config import get_settings
 
 logging.basicConfig(level=logging.INFO)
@@ -35,12 +35,18 @@ def create_app() -> FastAPI:
         redoc_url="/redoc" if not settings.is_production else None,
     )
 
+    origins = settings.allowed_origins
+    if not origins and not settings.is_production:
+        origins = ["*"]
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if not settings.is_production else [],
+        allow_origins=origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.add_middleware(PrivateNetworkMiddleware)
 
     app.add_middleware(RateLimitMiddleware)
 
