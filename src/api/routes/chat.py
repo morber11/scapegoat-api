@@ -29,7 +29,12 @@ async def chat(
             detail=f"AI service timed out after {settings.request_timeout_seconds}s",
         ) from None
     except ProviderError as exc:
+        raw = str(exc)
+        if "429" in raw or "RESOURCE_EXHAUSTED" in raw:
+            detail = "rate limit exceeded"
+        else:
+            detail = raw
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
+            detail=detail,
         ) from exc
