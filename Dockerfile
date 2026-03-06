@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir hatchling \
     && pip install --no-cache-dir .
 
 COPY src/ src/
+COPY .env .env
 
 WORKDIR /app/src
 
