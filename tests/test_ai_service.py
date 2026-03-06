@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -15,6 +15,13 @@ def _make_provider(reply: str = "hello") -> MagicMock:
     provider.model_name = "mock-model"
     provider.generate_response = AsyncMock(return_value=reply)
     return provider
+
+
+@pytest.fixture(autouse=True)
+def patch_sleep(monkeypatch):
+    sleeper = AsyncMock()
+    monkeypatch.setattr("services.ai_service.asyncio.sleep", sleeper)
+    return sleeper
 
 
 @pytest.mark.asyncio
@@ -44,16 +51,37 @@ async def test_chat_returns_shaped_response() -> None:
 
 
 @pytest.mark.asyncio
-async def test_provider_error_propagates() -> None:
+async def test_provider_error_retries_and_propagates(patch_sleep) -> None:
     provider = _make_provider()
-    provider.generate_response = AsyncMock(
-        side_effect=ProviderError("mock", "rate limit exceeded")
-    )
+    provider.generate_response = AsyncMock(side_effect=[
+        ProviderError("mock", "rate limit exceeded"),
+        ProviderError("mock", "rate limit exceeded"),
+        ProviderError("mock", "rate limit exceeded"),
+    ])
     service = AIService(provider)
 
     msg = ChatMessage(role="user", content="hello")
     with pytest.raises(ProviderError, match="rate limit exceeded"):
         await service.chat(ChatRequest(messages=[msg]))
+
+    assert provider.generate_response.await_count == 3
+    # we should have paused at least once while retrying
+    assert patch_sleep.await_count >= 1
+
+
+@pytest.mark.asyncio
+async def test_provider_error_then_success(patch_sleep) -> None:
+    provider = _make_provider()
+    provider.generate_response = AsyncMock(side_effect=[
+        ProviderError("mock", "oops"),
+        "okay",
+    ])
+    service = AIService(provider)
+
+    result = await service.chat(ChatRequest(messages=[ChatMessage(role="user", content="hello")]))
+    assert provider.generate_response.await_count == 2
+    patch_sleep.assert_awaited_once_with(3)
+    assert result.messages[-1].content == "okay"
 
 
 @pytest.mark.asyncio
@@ -172,7 +200,6 @@ async def test_trimming_happens_when_over_budget() -> None:
     from core.config import get_settings
     settings = get_settings()
     msgs = [ChatMessage(role="user", content="x" * 10) for _ in range(5)]
-    # set budget just below full estimate so trimming removes something
     full = estimate_tokens(SYSTEM_PERSONALITY_PROMPT, msgs)
     settings.max_input_tokens = full - 1
 
@@ -229,3 +256,25 @@ async def test_retry_on_user_echo() -> None:
     result = await service.chat(ChatRequest(messages=[user]))
     assert provider.generate_response.await_count == 2
     assert result.messages[-1].content == "fixed now"
+
+
+@pytest.mark.asyncio
+async def test_retry_waits_between_attempts(patch_sleep) -> None:
+    user = ChatMessage(role="user", content="hello")
+    provider = _make_provider()
+
+    provider.generate_response = AsyncMock(side_effect=["", "", "ok"])
+    service = AIService(provider)
+
+    await service.chat(ChatRequest(messages=[user]))
+
+    assert patch_sleep.await_count >= 1
+
+@pytest.mark.asyncio
+async def test_no_sleep_when_no_retry(patch_sleep) -> None:
+    user = ChatMessage(role="user", content="ok")
+    provider = _make_provider("ok")
+    service = AIService(provider)
+
+    await service.chat(ChatRequest(messages=[user]))
+    patch_sleep.assert_not_awaited()

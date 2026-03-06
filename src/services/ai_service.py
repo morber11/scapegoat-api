@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import difflib
 import logging
 
 from core.constants.prompts import SYSTEM_PERSONALITY_PROMPT
 from core.config import get_settings
-from providers.base import AIProvider
+from providers.base import AIProvider, ProviderError
 from schemas.chat import ChatMessage, ChatRequest, ChatResponse
 
 from services.token_utils import estimate_tokens, trim_messages
@@ -13,6 +14,7 @@ from services.token_utils import estimate_tokens, trim_messages
 logger = logging.getLogger(__name__)
 
 _MAX_RETRIES = 3
+_RETRY_DELAYS = (3, 5, 10)
 _SIMILARITY_THRESHOLD = 0.75
 _USER_ECHO_THRESHOLD = 0.7
 
@@ -42,14 +44,25 @@ class AIService:
             )
             payload = trimmed
 
-        reply = await self._provider.generate_response(
-            system_prompt=SYSTEM_PERSONALITY_PROMPT,
-            messages=payload,
-        )
+        # consider moving or splitting up later, kind of difficult to follow
+        last_index = _MAX_RETRIES - 1
+        for attempt in range(_MAX_RETRIES):
+            try:
+                reply = await self._provider.generate_response(
+                    system_prompt=SYSTEM_PERSONALITY_PROMPT,
+                    messages=payload,
+                )
+            except ProviderError:
+                delay = _RETRY_DELAYS[attempt] if attempt < len(_RETRY_DELAYS) else _RETRY_DELAYS[-1]
+                if attempt < last_index:
+                    await asyncio.sleep(delay)
+                    continue
+                raise
 
-        for _ in range(_MAX_RETRIES):
             reprompt = self._get_reprompt(reply, history)
-            if reprompt is None:
+
+            # if no reprompt is needed or  this is the last permitted attempt - early break
+            if reprompt is None or attempt == last_index:
                 break
 
             logger.debug("response quality check failed - retrying: %s", reprompt)
@@ -58,16 +71,14 @@ class AIService:
             if estimate_tokens(SYSTEM_PERSONALITY_PROMPT, payload) > budget:
                 trimmed = trim_messages(SYSTEM_PERSONALITY_PROMPT, payload, budget)
                 logger.info(
-                    "trimming chat history for retry from %d to %d messages",
+                    "trimming chat history from %d to %d messages",
                     len(payload),
                     len(trimmed),
                 )
                 payload = trimmed
 
-            reply = await self._provider.generate_response(
-                system_prompt=SYSTEM_PERSONALITY_PROMPT,
-                messages=payload,
-            )
+            delay = _RETRY_DELAYS[attempt] if attempt < len(_RETRY_DELAYS) else _RETRY_DELAYS[-1]
+            await asyncio.sleep(delay)
         # instead of re prompting if there is a missing period, append it
         last_user_msg = history[-1].content if history and history[-1].role == "user" else ""
         if last_user_msg.endswith(".") and not reply.endswith("."):
