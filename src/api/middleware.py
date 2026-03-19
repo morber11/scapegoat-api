@@ -5,7 +5,8 @@ from collections.abc import Callable
 
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.responses import Response
 
 from core.config import get_settings
 
@@ -17,7 +18,7 @@ def reset_rate_limits() -> None:
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: Callable) -> Request:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         settings = get_settings()
         limit = settings.rate_limit_requests
         window = settings.rate_limit_window_seconds
