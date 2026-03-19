@@ -1,6 +1,8 @@
 # Scapegoat API
 Because we all need someone to blame
 
+Web: [morber11/scapegoat-web](https://github.com/morber11/scapegoat-web)
+
 Run server:
 
 ```bash
