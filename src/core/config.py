@@ -34,7 +34,7 @@ class Settings(BaseSettings):
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
-    def _split_origins(cls, v):
+    def _split_origins(cls, v: str | list[str]) -> list[str]:
         if isinstance(v, str):
             return [item.strip() for item in v.split(",") if item.strip()]
         return v
@@ -47,4 +47,7 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     env_file = None if os.environ.get("PYTEST_CURRENT_TEST") else ".env"
-    return Settings(_env_file=env_file)
+    # pydantic's BaseSettings accepts `_env_file` at runtime, but the stubbed
+    # signature can confuse static checkers. Use a narrow `type: ignore` here
+    # to preserve intended runtime behavior (do not load `.env` during tests).
+    return Settings(_env_file=env_file)  # type: ignore[call-arg]
