@@ -8,7 +8,7 @@ from providers.base import ProviderError
 from schemas.chat import ChatRequest, ChatResponse
 from services.ai_service import AIService
 
-_ai_service_dep: Depends = Depends(get_ai_service)
+_ai_service_dep = Depends(get_ai_service)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 

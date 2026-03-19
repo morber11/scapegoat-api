@@ -5,7 +5,7 @@ from providers.base import AIProvider
 from providers.gemini_provider import GeminiProvider
 from services.ai_service import AIService
 
-_settings_dep: Depends = Depends(get_settings)
+_settings_dep = Depends(get_settings)
 
 _provider_cache: AIProvider | None = None
 
