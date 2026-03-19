@@ -4,11 +4,10 @@ import asyncio
 import difflib
 import logging
 
-from core.constants.prompts import SYSTEM_PERSONALITY_PROMPT
 from core.config import get_settings
+from core.constants.prompts import SYSTEM_PERSONALITY_PROMPT
 from providers.base import AIProvider, ProviderError
 from schemas.chat import ChatMessage, ChatRequest, ChatResponse
-
 from services.token_utils import estimate_tokens, trim_messages
 
 logger = logging.getLogger(__name__)

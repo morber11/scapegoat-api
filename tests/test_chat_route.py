@@ -2,8 +2,8 @@ import asyncio
 
 from fastapi.testclient import TestClient
 
-from core.config import get_settings
 import api.middleware as middleware
+from core.config import get_settings
 
 
 def test_chat_returns_200(client: TestClient) -> None:

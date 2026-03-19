@@ -3,7 +3,7 @@ import asyncio
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import get_ai_service
-from core.config import get_settings, Settings
+from core.config import Settings, get_settings
 from providers.base import ProviderError
 from schemas.chat import ChatRequest, ChatResponse
 from services.ai_service import AIService
@@ -23,7 +23,7 @@ async def chat(
         return await asyncio.wait_for(
             service.chat(request), timeout=settings.request_timeout_seconds
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
             detail=f"AI service timed out after {settings.request_timeout_seconds}s",

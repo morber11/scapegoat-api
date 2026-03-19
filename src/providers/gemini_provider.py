@@ -45,7 +45,7 @@ class GeminiProvider:
             status = None
             resp = getattr(exc, "response", None)
             if resp is not None and hasattr(resp, "status_code"):
-                status = getattr(resp, "status_code")
+                status = resp.status_code
             if status == 429:
                 raise ProviderError(_PROVIDER_NAME, "rate limit exceeded", status_code=429) from exc
             # else just propagate the original message

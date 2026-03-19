@@ -5,8 +5,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import chat, health
 from api.middleware import RateLimitMiddleware
+from api.routes import chat, health
 from core.config import get_settings
 
 logging.basicConfig(level=logging.INFO)

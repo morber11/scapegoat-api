@@ -2,7 +2,6 @@
 import os
 
 import pytest
-
 from fastapi.testclient import TestClient
 
 os.environ.setdefault("GEMINI_API_KEY", "test-key")
