@@ -5,9 +5,12 @@ Web: [morber11/scapegoat-web](https://github.com/morber11/scapegoat-web)
 
 Run server:
 
+Note: needs to be run from /src directory
+You will need to copy .env to /src as well
+
 ```bash
 cp .env.example .env
-pip install -e "[dev]"
+pip install -e '.[dev]'
 uvicorn main:app --reload
 ```
 
