@@ -36,8 +36,14 @@ def create_app() -> FastAPI:
     )
 
     origins = settings.allowed_origins
-    if not origins and not settings.is_production:
-        origins = ["*"]
+    if not origins:
+        if not settings.is_production:
+            origins = ["*"]
+        else:
+            raise RuntimeError(
+                "ALLOWED_ORIGINS is empty in production"
+                "Set ALLOWED_ORIGINS in .env"
+            )
 
     logging.info("CORS allowed origins: %s", origins)
 
