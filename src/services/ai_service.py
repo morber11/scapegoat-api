@@ -119,7 +119,7 @@ class AIService:
 
         checks = (
             self._check_capitalization(reply, last_user),
-            self._check_simularity_to_user_message(reply, last_user),
+            self._check_similarity_to_user_message(reply, last_user),
             self._check_repetition(reply, messages),
         )
         reasons = [r for r in checks if r is not None]
@@ -140,7 +140,7 @@ class AIService:
         return None
 
 
-    def _check_simularity_to_user_message(self, reply: str, last_user: str | None) -> str | None:
+    def _check_similarity_to_user_message(self, reply: str, last_user: str | None) -> str | None:
         if not last_user or last_user.lower() == reply.lower():
             return None
 
