@@ -73,9 +73,8 @@ class AIService:
                     messages=payload,
                 )
             except ProviderError:
-                delay = _RETRY_DELAYS[attempt] if attempt < len(_RETRY_DELAYS) else _RETRY_DELAYS[-1]
                 if attempt < last_index:
-                    await asyncio.sleep(delay)
+                    await asyncio.sleep(self._delay_for(attempt, _RETRY_DELAYS))
                     continue
                 raise
 
@@ -101,10 +100,14 @@ class AIService:
                 )
                 payload = trimmed
 
-            delay = _QUALITY_RETRY_DELAYS[attempt] if attempt < len(_QUALITY_RETRY_DELAYS) else _QUALITY_RETRY_DELAYS[-1]
-            await asyncio.sleep(delay)
+            await asyncio.sleep(self._delay_for(attempt, _QUALITY_RETRY_DELAYS))
 
         return reply
+
+
+    @staticmethod
+    def _delay_for(attempt: int, delays: tuple[int, ...]) -> int:
+        return delays[attempt]
 
 
     def _wrap_reprompt(self, reprompt: str) -> str:
