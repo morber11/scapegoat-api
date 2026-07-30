@@ -13,8 +13,6 @@ from schemas.chat import ChatMessage
 logger = logging.getLogger(__name__)
 
 
-
-
 class GeminiProvider:
 
     def __init__(self, settings: Settings) -> None:
