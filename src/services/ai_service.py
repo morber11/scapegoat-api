@@ -115,28 +115,50 @@ class AIService:
         if not reply:
             return "please provide a response"
 
-        reasons = []
-
         last_user = next((m.content for m in reversed(messages) if m.role == MessageRole.USER), None)
-        if last_user and last_user[0].isalpha():
-            user_is_lowercase = last_user == last_user.lower()
-            reply_starts_upper = reply[0].isalpha() and reply[0].isupper()
-            if user_is_lowercase and reply_starts_upper:
-                reasons.append("the user types in lowercase - match their style, do not capitalise your response")
-            elif not user_is_lowercase and reply[0].isalpha() and reply[0].islower():
-                reasons.append("the user types with proper capitalisation - start your response with a capital letter")
+
+        checks = (
+            self._check_capitalization(reply, last_user),
+            self._check_simularity_to_user_message(reply, last_user),
+            self._check_repetition(reply, messages),
+        )
+        reasons = [r for r in checks if r is not None]
+        return ". ".join(reasons) + "." if reasons else None
 
 
-        if last_user and last_user.lower() != reply.lower():
-            user_words = [w.strip(".,!?;:'\"") for w in last_user.lower().split()]
-            reply_words = {w.strip(".,!?;:'\"") for w in reply.lower().split()}
-            if user_words and reply_words:
-                user_words_set = set(user_words)
-                user_in_reply = sum(1 for w in user_words if w in reply_words) / len(user_words)
-                reply_in_user = sum(1 for w in reply_words if w in user_words_set) / len(reply_words)
-                if min(user_in_reply, reply_in_user) >= _USER_ECHO_THRESHOLD:
-                    reasons.append("your response is too similar to what the user just said - say something different")
+    def _check_capitalization(self, reply: str, last_user: str | None) -> str | None:
+        if not last_user or not last_user[0].isalpha() or not reply[0].isalpha():
+            return None
 
+        user_is_lowercase = last_user == last_user.lower()
+        reply_starts_upper = reply[0].isupper()
+
+        if user_is_lowercase and reply_starts_upper:
+            return "the user types in lowercase - match their style, do not capitalise your response"
+        if not user_is_lowercase and reply[0].islower():
+            return "the user types with proper capitalisation - start your response with a capital letter"
+        return None
+
+
+    def _check_simularity_to_user_message(self, reply: str, last_user: str | None) -> str | None:
+        if not last_user or last_user.lower() == reply.lower():
+            return None
+
+        user_words = [w.strip(".,!?;:'\"") for w in last_user.lower().split()]
+        reply_words = {w.strip(".,!?;:'\"") for w in reply.lower().split()}
+        if not user_words or not reply_words:
+            return None
+
+        user_words_set = set(user_words)
+        user_in_reply = sum(1 for w in user_words if w in reply_words) / len(user_words)
+        reply_in_user = sum(1 for w in reply_words if w in user_words_set) / len(reply_words)
+
+        if min(user_in_reply, reply_in_user) >= _USER_ECHO_THRESHOLD:
+            return "your response is too similar to what the user just said - say something different"
+        return None
+
+
+    def _check_repetition(self, reply: str, messages: list[ChatMessage]) -> str | None:
         reply_lower = reply.lower()
         checked = 0
         for m in reversed(messages):
@@ -146,8 +168,5 @@ class AIService:
                 break
             checked += 1
             if difflib.SequenceMatcher(None, reply_lower, m.content.lower()).ratio() >= _SIMILARITY_THRESHOLD:
-                reasons.append("vary your response - don't repeat something you've already said")
-                break
-
-        return ". ".join(reasons) + "." if reasons else None
-
+                return "vary your response - don't repeat something you've already said"
+        return None
