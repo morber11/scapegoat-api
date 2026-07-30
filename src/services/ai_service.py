@@ -89,7 +89,7 @@ class AIService:
             assistant_turn_content = reply if reply else _EMPTY_REPLY_PLACEHOLDER
             payload = payload + [
                 ChatMessage(role=MessageRole.ASSISTANT, content=assistant_turn_content),
-                ChatMessage(role=MessageRole.USER, content=reprompt),
+                ChatMessage(role=MessageRole.USER, content=self._wrap_reprompt(reprompt)),
             ]
             
             if estimate_tokens(SYSTEM_PERSONALITY_PROMPT, payload) > budget:
@@ -105,6 +105,13 @@ class AIService:
             await asyncio.sleep(delay)
 
         return reply
+
+
+    def _wrap_reprompt(self, reprompt: str) -> str:
+        return (
+            "[Automated quality check on your previous reply - this is not "
+            f"from the user] {reprompt} Please revise your last response accordingly"
+        )
 
 
     def _get_reprompt(self, reply: str, messages: list[ChatMessage]) -> str | None:
