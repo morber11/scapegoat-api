@@ -7,7 +7,7 @@ import logging
 from core.config import get_settings
 from core.constants.prompts import SYSTEM_PERSONALITY_PROMPT
 from providers.base import AIProvider, ProviderError
-from schemas.chat import ChatMessage, ChatRequest, ChatResponse
+from schemas.chat import ChatMessage, ChatRequest, ChatResponse, MessageRole
 from services.token_utils import estimate_tokens, trim_messages
 
 logger = logging.getLogger(__name__)
@@ -37,12 +37,12 @@ class AIService:
         reply = await self._attempt_with_retry(payload, history, budget)
 
         # instead of re prompting if there is a missing period, append it
-        last_user_msg = history[-1].content if history and history[-1].role == "user" else ""
+        last_user_msg = history[-1].content if history and history[-1].role == MessageRole.USER else ""
         if last_user_msg.endswith(".") and not reply.endswith("."):
             reply += "."
 
         return ChatResponse(
-            messages=history + [ChatMessage(role="assistant", content=reply)]
+            messages=history + [ChatMessage(role=MessageRole.ASSISTANT, content=reply)]
         )
 
 
@@ -84,7 +84,7 @@ class AIService:
 
             logger.debug("response quality check failed - retrying: %s", reprompt)
 
-            payload = payload + [ChatMessage(role="user", content=reprompt)]
+            payload = payload + [ChatMessage(role=MessageRole.USER, content=reprompt)]
             if estimate_tokens(SYSTEM_PERSONALITY_PROMPT, payload) > budget:
                 trimmed = trim_messages(SYSTEM_PERSONALITY_PROMPT, payload, budget)
                 logger.info(
@@ -106,7 +106,7 @@ class AIService:
 
         reasons = []
 
-        last_user = next((m.content for m in reversed(messages) if m.role == "user"), None)
+        last_user = next((m.content for m in reversed(messages) if m.role == MessageRole.USER), None)
         if last_user and last_user[0].isalpha():
             user_is_lowercase = last_user == last_user.lower()
             reply_starts_upper = reply[0].isalpha() and reply[0].isupper()
@@ -127,7 +127,7 @@ class AIService:
 
         reply_lower = reply.lower()
         for m in messages:
-            if m.role != "assistant" or not m.content:
+            if m.role != MessageRole.ASSISTANT or not m.content:
                 continue
             if difflib.SequenceMatcher(None, reply_lower, m.content.lower()).ratio() >= _SIMILARITY_THRESHOLD:
                 reasons.append("vary your response - don't repeat something you've already said")

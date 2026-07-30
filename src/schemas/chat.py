@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-from typing import Literal
+from enum import StrEnum
 
 from pydantic import BaseModel, field_validator, model_validator
 
 
+class MessageRole(StrEnum):
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
 class ChatMessage(BaseModel):
-    role: Literal["user", "assistant"]
+    role: MessageRole
     content: str
 
     @field_validator("content")
@@ -22,7 +27,7 @@ class ChatRequest(BaseModel):
 
     @model_validator(mode="after")
     def first_message_must_be_user(self) -> ChatRequest:
-        if not self.messages or self.messages[0].role != "user":
+        if not self.messages or self.messages[0].role != MessageRole.USER:
             raise ValueError("the first message must have role 'user'")
         return self
 

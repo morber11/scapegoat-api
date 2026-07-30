@@ -8,7 +8,7 @@ from google.genai import types
 
 from core.config import ConfigNotSetError, Settings
 from providers.base import ProviderError, ProviderName
-from schemas.chat import ChatMessage
+from schemas.chat import ChatMessage, MessageRole
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +48,7 @@ class GeminiProvider:
 
     def _call_gemini(self, system_prompt: str, messages: list[ChatMessage]) -> str:
         contents = [
-            types.Content(
-                role="user" if msg.role == "user" else "model",
+            (types.UserContent if msg.role == MessageRole.USER else types.ModelContent)(
                 parts=[types.Part.from_text(text=msg.content)],
             )
             for msg in messages
