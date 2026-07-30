@@ -91,14 +91,7 @@ class AIService:
                 ChatMessage(role=MessageRole.USER, content=self._wrap_reprompt(reprompt)),
             ]
             
-            if estimate_tokens(SYSTEM_PERSONALITY_PROMPT, payload) > budget:
-                trimmed = trim_messages(SYSTEM_PERSONALITY_PROMPT, payload, budget)
-                logger.info(
-                    "trimming chat history from %d to %d messages",
-                    len(payload),
-                    len(trimmed),
-                )
-                payload = trimmed
+            payload = self._trim_to_budget(payload, budget)
 
             await asyncio.sleep(self._delay_for(attempt, _QUALITY_RETRY_DELAYS))
 
@@ -137,8 +130,9 @@ class AIService:
             user_words = [w.strip(".,!?;:'\"") for w in last_user.lower().split()]
             reply_words = {w.strip(".,!?;:'\"") for w in reply.lower().split()}
             if user_words and reply_words:
+                user_words_set = set(user_words)
                 user_in_reply = sum(1 for w in user_words if w in reply_words) / len(user_words)
-                reply_in_user = sum(1 for w in reply_words if w in set(user_words)) / len(reply_words)
+                reply_in_user = sum(1 for w in reply_words if w in user_words_set) / len(reply_words)
                 if min(user_in_reply, reply_in_user) >= _USER_ECHO_THRESHOLD:
                     reasons.append("your response is too similar to what the user just said - say something different")
 
