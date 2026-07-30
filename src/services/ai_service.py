@@ -16,6 +16,7 @@ _MAX_RETRIES = 3
 _RETRY_DELAYS = (3, 5, 10)
 _SIMILARITY_THRESHOLD = 0.75
 _USER_ECHO_THRESHOLD = 0.7
+_EMPTY_REPLY_PLACEHOLDER = "(no response generated)"
 
 
 class AIService:
@@ -84,7 +85,12 @@ class AIService:
 
             logger.debug("response quality check failed - retrying: %s", reprompt)
 
-            payload = payload + [ChatMessage(role=MessageRole.USER, content=reprompt)]
+            assistant_turn_content = reply if reply else _EMPTY_REPLY_PLACEHOLDER
+            payload = payload + [
+                ChatMessage(role=MessageRole.ASSISTANT, content=assistant_turn_content),
+                ChatMessage(role=MessageRole.USER, content=reprompt),
+            ]
+            
             if estimate_tokens(SYSTEM_PERSONALITY_PROMPT, payload) > budget:
                 trimmed = trim_messages(SYSTEM_PERSONALITY_PROMPT, payload, budget)
                 logger.info(
