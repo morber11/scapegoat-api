@@ -101,7 +101,7 @@ class AIService:
 
     @staticmethod
     def _delay_for(attempt: int, delays: tuple[int, ...]) -> int:
-        return delays[attempt]
+        return delays[min(attempt, len(delays) - 1)]
 
 
     def _wrap_reprompt(self, reprompt: str) -> str:
