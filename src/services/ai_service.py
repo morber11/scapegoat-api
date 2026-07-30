@@ -17,6 +17,7 @@ _RETRY_DELAYS = (3, 5, 10)
 _QUALITY_RETRY_DELAYS = (1, 1, 1)
 _SIMILARITY_THRESHOLD = 0.75
 _USER_ECHO_THRESHOLD = 0.7
+_MAX_REPLY_CHECK = 5  # only compare against the last N assistant turns to keep difflib fast on long histories
 _EMPTY_REPLY_PLACEHOLDER = "(no response generated)"
 
 
@@ -137,9 +138,13 @@ class AIService:
                     reasons.append("your response is too similar to what the user just said - say something different")
 
         reply_lower = reply.lower()
-        for m in messages:
+        checked = 0
+        for m in reversed(messages):
             if m.role != MessageRole.ASSISTANT or not m.content:
                 continue
+            if checked >= _MAX_REPLY_CHECK:
+                break
+            checked += 1
             if difflib.SequenceMatcher(None, reply_lower, m.content.lower()).ratio() >= _SIMILARITY_THRESHOLD:
                 reasons.append("vary your response - don't repeat something you've already said")
                 break
