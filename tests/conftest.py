@@ -1,15 +1,10 @@
-
-import os
-
-import pytest
-from fastapi.testclient import TestClient
-
-os.environ.setdefault("GEMINI_API_KEY", "test-key")
+import osfrom collections.abc import Generatorfrom typing import Anyimport pytestfrom fastapi.testclient import TestClientos.environ.setdefault("PROVIDER_API_KEY", "test-key")
 
 from api.dependencies import get_ai_service
 from api.middleware import reset_rate_limits
 from core.config import get_settings
 from main import app
+from schemas.chat import ChatMessage
 from services.ai_service import AIService
 
 
@@ -23,7 +18,7 @@ class StubProvider:
     def model_name(self) -> str:
         return "stub-model"
 
-    async def generate_response(self, system_prompt: str, messages: list) -> str:
+    async def generate_response(self, system_prompt: str, messages: list[ChatMessage]) -> str:
         last = messages[-1].content if messages else ""
         return f"stub reply to: {last}"
 
@@ -33,7 +28,7 @@ def stub_ai_service() -> AIService:
 
 
 @pytest.fixture(autouse=True)
-def _clear_settings_cache() -> None:
+def _clear_settings_cache() -> Generator[None, None, None]:
     get_settings.cache_clear()
     reset_rate_limits()
     yield
@@ -42,7 +37,7 @@ def _clear_settings_cache() -> None:
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client() -> Generator[TestClient, Any, None]:
     app.dependency_overrides[get_ai_service] = stub_ai_service
     with TestClient(app, raise_server_exceptions=True) as c:
         yield c

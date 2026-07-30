@@ -6,37 +6,34 @@ from asyncio import to_thread
 from google import genai
 from google.genai import types
 
-from core.config import Settings
-from providers.base import ProviderError
+from core.config import ConfigNotSetError, Settings
+from providers.base import ProviderError, ProviderName
 from schemas.chat import ChatMessage
 
 logger = logging.getLogger(__name__)
 
-_PROVIDER_NAME = "gemini"
+
 
 
 class GeminiProvider:
 
     def __init__(self, settings: Settings) -> None:
-        if not settings.gemini_api_key:
-            raise RuntimeError(
-                "GEMINI_API_KEY is not set."
-                "copy .env.example to .env and fill in the value."
-            )
+        if not settings.provider_api_key:
+            raise ConfigNotSetError("PROVIDER_API_KEY")
         self._settings = settings
-        self._client = genai.Client(api_key=settings.gemini_api_key)
+        self._client = genai.Client(api_key=settings.provider_api_key)
 
 
     @property
     def provider_name(self) -> str:
-        return _PROVIDER_NAME
+        return ProviderName.GEMINI
 
     @property
     def model_name(self) -> str:
-        return self._settings.gemini_model
+        return self._settings.provider_model
 
     async def generate_response(self, system_prompt: str, messages: list[ChatMessage]) -> str:
-        logger.info("sending request to gemini model=%s", self._settings.gemini_model)
+        logger.info("sending request to gemini model=%s", self._settings.provider_model)
         try:
             return await to_thread(self._call_gemini, system_prompt, messages)
         except ProviderError:
@@ -47,9 +44,9 @@ class GeminiProvider:
             if resp is not None and hasattr(resp, "status_code"):
                 status = resp.status_code
             if status == 429:
-                raise ProviderError(_PROVIDER_NAME, "rate limit exceeded", status_code=429) from exc
+                raise ProviderError(ProviderName.GEMINI, "rate limit exceeded", status_code=429) from exc
             # else just propagate the original message
-            raise ProviderError(_PROVIDER_NAME, str(exc), status_code=status) from exc
+            raise ProviderError(ProviderName.GEMINI, str(exc), status_code=status) from exc
 
     def _call_gemini(self, system_prompt: str, messages: list[ChatMessage]) -> str:
         contents = [
@@ -62,7 +59,7 @@ class GeminiProvider:
 
         logger.debug("gemini contents length=%d", len(contents))
         response = self._client.models.generate_content(
-            model=self._settings.gemini_model,
+            model=self._settings.provider_model,
             contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,

@@ -1,7 +1,8 @@
 from fastapi import Depends
 
 from core.config import Settings, get_settings
-from providers.base import AIProvider
+from providers.base import AIProvider, ProviderName
+from providers.deepseek_provider import DeepSeekProvider
 from providers.gemini_provider import GeminiProvider
 from services.ai_service import AIService
 
@@ -13,16 +14,17 @@ _provider_cache: AIProvider | None = None
 def _build_provider(settings: Settings) -> AIProvider:
     global _provider_cache
     if _provider_cache is None:
-        provider_name = settings.provider.lower()
-
-        if provider_name == "gemini":
-            _provider_cache = GeminiProvider(settings)
-        else:
-            raise ValueError(
-                f"unknown provider '{settings.provider}'. "
-                "check your PROVIDER env var or register the adapter in "
-                "src/scapegoat_api/api/dependencies.py."
-            )
+        match settings.provider:
+            case ProviderName.GEMINI:
+                _provider_cache = GeminiProvider(settings)
+            case ProviderName.DEEPSEEK:
+                _provider_cache = DeepSeekProvider(settings)
+            case _:
+                raise ValueError(
+                    f"unknown provider '{settings.provider}'. "
+                    "check your PROVIDER env var or register the adapter in "
+                    "src/scapegoat_api/api/dependencies.py."
+                )
     return _provider_cache
 
 

@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Protocol, runtime_checkable
 
 from schemas.chat import ChatMessage
+
+
+class ProviderName(StrEnum):
+    GEMINI = "gemini"
+    DEEPSEEK = "deepseek"
 
 
 @runtime_checkable

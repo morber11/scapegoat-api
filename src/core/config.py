@@ -5,9 +5,19 @@ from typing import Annotated
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+from providers.base import ProviderName
+
 DEFAULT_REQUEST_TIMEOUT_SECONDS: int = 30
 DEFAULT_RATE_LIMIT_REQUESTS: int = 5
 DEFAULT_RATE_LIMIT_WINDOW_SECONDS: int = 60
+
+
+class ConfigNotSetError(Exception):
+    def __init__(self, field: str) -> None:
+        self.field = field
+        super().__init__(
+            f"{field} is not set. Copy .env.example to .env and fill in the value."
+        )
 
 
 class Settings(BaseSettings):
@@ -19,7 +29,7 @@ class Settings(BaseSettings):
     )
 
     app_env: str = "development"
-    provider: str = "gemini" 
+    provider: ProviderName = ProviderName.GEMINI
     request_timeout_seconds: int = DEFAULT_REQUEST_TIMEOUT_SECONDS
 
     rate_limit_requests: int = DEFAULT_RATE_LIMIT_REQUESTS
@@ -27,8 +37,8 @@ class Settings(BaseSettings):
 
     max_input_tokens: int = 1024
 
-    gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    provider_api_key: str = ""
+    provider_model: str = ""
 
     allowed_origins: Annotated[list[str], NoDecode] = []
 

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.middleware import RateLimitMiddleware
 from api.routes import chat, health
-from core.config import get_settings
+from core.config import ConfigNotSetError, get_settings
 
 logging.basicConfig(level=logging.INFO)
 
@@ -16,10 +16,8 @@ logging.basicConfig(level=logging.INFO)
 async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
 
-    if not settings.gemini_api_key:
-        raise RuntimeError(
-            "GEMINI_API_KEY is not set. Copy .env.example to .env and fill in the value."
-        )
+    if not settings.provider_api_key:
+        raise ConfigNotSetError("PROVIDER_API_KEY")
     yield
 
 

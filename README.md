@@ -1,4 +1,5 @@
 # Scapegoat API
+
 Because we all need someone to blame
 
 Web: [morber11/scapegoat-web](https://github.com/morber11/scapegoat-web)
@@ -40,3 +41,8 @@ POST /api/v1/chat
 ```
 
 only 2 roles are available, ``user`` and ``assistant``
+
+## Supported Providers
+
+* Gemini (via Gemini Package)
+* Deepseek (via Deepseek API)
