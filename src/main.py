@@ -39,7 +39,7 @@ def create_app() -> FastAPI:
             origins = ["*"]
         else:
             raise RuntimeError(
-                "ALLOWED_ORIGINS is empty in production"
+                "ALLOWED_ORIGINS is empty in production. "
                 "Set ALLOWED_ORIGINS in .env"
             )
 
