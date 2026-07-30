@@ -9,6 +9,7 @@ from schemas.chat import ChatRequest, ChatResponse
 from services.ai_service import AIService
 
 _ai_service_dep = Depends(get_ai_service)
+_settings_dep = Depends(get_settings)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -17,7 +18,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 async def chat(
     request: ChatRequest,
     service: AIService = _ai_service_dep,
-    settings: Settings = Depends(get_settings),
+    settings: Settings = _settings_dep,
 ) -> ChatResponse:
     try:
         return await asyncio.wait_for(
@@ -38,10 +39,7 @@ async def chat(
 
 
         raw = str(exc)
-        if "429" in raw or "RESOURCE_EXHAUSTED" in raw:
-            detail = "rate limit exceeded"
-        else:
-            detail = raw
+        detail = "rate limit exceeded" if "429" in raw or "RESOURCE_EXHAUSTED" in raw else raw
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=detail,
