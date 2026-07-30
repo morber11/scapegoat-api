@@ -23,7 +23,7 @@ def _build_provider(settings: Settings) -> AIProvider:
                 raise ValueError(
                     f"unknown provider '{settings.provider}'. "
                     "check your PROVIDER env var or register the adapter in "
-                    "src/scapegoat_api/api/dependencies.py."
+                    "src/api/dependencies.py"
                 )
     return _provider_cache
 
