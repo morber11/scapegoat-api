@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 _MAX_RETRIES = 3
 _RETRY_DELAYS = (3, 5, 10)
+_QUALITY_RETRY_DELAYS = (1, 1, 1)
 _SIMILARITY_THRESHOLD = 0.75
 _USER_ECHO_THRESHOLD = 0.7
 _EMPTY_REPLY_PLACEHOLDER = "(no response generated)"
@@ -100,7 +101,7 @@ class AIService:
                 )
                 payload = trimmed
 
-            delay = _RETRY_DELAYS[attempt] if attempt < len(_RETRY_DELAYS) else _RETRY_DELAYS[-1]
+            delay = _QUALITY_RETRY_DELAYS[attempt] if attempt < len(_QUALITY_RETRY_DELAYS) else _QUALITY_RETRY_DELAYS[-1]
             await asyncio.sleep(delay)
 
         return reply
