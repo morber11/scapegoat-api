@@ -1,6 +1,8 @@
 import logging
+import tomllib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +12,13 @@ from api.routes import chat, health
 from core.config import ConfigNotSetError, get_settings
 
 logging.basicConfig(level=logging.INFO)
+
+try:
+    _version = tomllib.loads(
+        Path(__file__).parent.parent.joinpath("pyproject.toml").read_text()
+    )["project"]["version"]
+except Exception:
+    _version = "0.0.0"
 
 
 @asynccontextmanager
@@ -27,7 +36,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Scapegoat API",
         description="because we all need someone to blame",
-        version="1.0.0",
+        version=_version,
         lifespan=lifespan,
         docs_url="/docs" if not settings.is_production else None,
         redoc_url="/redoc" if not settings.is_production else None,
