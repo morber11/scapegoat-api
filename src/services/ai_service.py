@@ -30,20 +30,39 @@ class AIService:
         )
 
         history = list(request.messages)
-        payload = list(history)
         settings = get_settings()
         budget = settings.max_input_tokens
 
-        if estimate_tokens(SYSTEM_PERSONALITY_PROMPT, payload) > budget:
-            trimmed = trim_messages(SYSTEM_PERSONALITY_PROMPT, payload, budget)
+        payload = self._trim_to_budget(history, budget)
+        reply = await self._attempt_with_retry(payload, history, budget)
+
+        # instead of re prompting if there is a missing period, append it
+        last_user_msg = history[-1].content if history and history[-1].role == "user" else ""
+        if last_user_msg.endswith(".") and not reply.endswith("."):
+            reply += "."
+
+        return ChatResponse(
+            messages=history + [ChatMessage(role="assistant", content=reply)]
+        )
+
+
+    def _trim_to_budget(
+        self, messages: list[ChatMessage], budget: int
+    ) -> list[ChatMessage]:
+        if estimate_tokens(SYSTEM_PERSONALITY_PROMPT, messages) > budget:
+            trimmed = trim_messages(SYSTEM_PERSONALITY_PROMPT, messages, budget)
             logger.info(
                 "trimming chat history from %d to %d messages to fit token budget",
-                len(payload),
+                len(messages),
                 len(trimmed),
             )
-            payload = trimmed
+            return trimmed
+        return list(messages)
 
-        # consider moving or splitting up later, kind of difficult to follow
+
+    async def _attempt_with_retry(
+        self, payload: list[ChatMessage], history: list[ChatMessage], budget: int
+    ) -> str:
         last_index = _MAX_RETRIES - 1
         for attempt in range(_MAX_RETRIES):
             try:
@@ -60,7 +79,6 @@ class AIService:
 
             reprompt = self._get_reprompt(reply, history)
 
-            # if no reprompt is needed or  this is the last permitted attempt - early break
             if reprompt is None or attempt == last_index:
                 break
 
@@ -78,14 +96,8 @@ class AIService:
 
             delay = _RETRY_DELAYS[attempt] if attempt < len(_RETRY_DELAYS) else _RETRY_DELAYS[-1]
             await asyncio.sleep(delay)
-        # instead of re prompting if there is a missing period, append it
-        last_user_msg = history[-1].content if history and history[-1].role == "user" else ""
-        if last_user_msg.endswith(".") and not reply.endswith("."):
-            reply += "."
 
-        return ChatResponse(
-            messages=history + [ChatMessage(role="assistant", content=reply)]
-        )
+        return reply
 
 
     def _get_reprompt(self, reply: str, messages: list[ChatMessage]) -> str | None:
