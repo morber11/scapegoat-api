@@ -12,6 +12,7 @@ from schemas.chat import ChatMessage
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://api.deepseek.com"
+_ENDPOINT = "/chat/completions"
 
 
 class DeepSeekProvider:
@@ -47,7 +48,7 @@ class DeepSeekProvider:
 
         try:
             resp = await self._client.post(
-                "/chat/completions",
+                _ENDPOINT,
                 json={
                     "model": self._settings.provider_model,
                     "messages": deepseek_messages,
@@ -72,5 +73,4 @@ class DeepSeekProvider:
         except ProviderError:
             raise
         except Exception as exc:
-            # match GeminiProvider pattern - wrap unexpected errors
             raise ProviderError(ProviderName.DEEPSEEK, str(exc)) from exc
